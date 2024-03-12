@@ -1,75 +1,59 @@
 import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
 
+# Load data from the 'Purchase data' worksheet
+file_path = 'C:\\Users\\sai jaswanth\\Desktop\\Machine Learning\\Lab Session1 Data.xlsx'
+purchase_data = pd.read_excel(file_path, sheet_name='Purchase data')
 
-df = pd.DataFrame({'C': [220, 180, 250, 190], 'category': ['None', 'None', 'None', 'None']})
-n = df.shape[0]
+# Extract matrices A and C
+matrix_A = purchase_data.iloc[:, 1:4]
+matrix_C = purchase_data.iloc[:, 4]
 
-for i in range(n):
-    if df.loc[i, 'C'] > 200:
-        df.loc[i, 'category'] = "rich"
-    else:
-        df.loc[i, 'category'] = "poor"
+# Calculate vector space properties
+dimensionality_vector_space = matrix_A.shape[1]
+num_vectors_in_space = matrix_A.shape[0]
 
-print(df)
+# Calculate the rank of Matrix A
+rank_of_matrix_A = np.linalg.matrix_rank(matrix_A)
 
-# Sample data for Wednesday in April
-df1 = pd.DataFrame({'Price': [100, 120, 150, 90], 'Day': ['Wed', 'Wed', 'Wed', 'Wed'], 'Month': ['Apr', 'Apr', 'Apr', 'Apr'], 'Chg%': [5, -2, 8, -3]})
+# Calculate the pseudo-inverse of Matrix A
+pseudo_inverse_A = np.linalg.pinv(matrix_A)
 
-mean_D = df1['Price'].mean()
+# Calculate the cost of each product using the pseudo-inverse
+product_costs = np.dot(pseudo_inverse_A, matrix_C)
 
-# Calculate the variance of the 'D' column
-variance_D = df1['Price'].var()
+# Display results
+print("Matrix A:")
+print(matrix_A)
+print("Matrix C:")
+print(matrix_C)
+print("Dimensionality of the vector space:", dimensionality_vector_space)
+print("Number of vectors in the vector space:", num_vectors_in_space)
+print("Rank of Matrix A:", rank_of_matrix_A)
+print("Cost of each product using Pseudo-Inverse:")
+print(product_costs)
 
-print('Mean:', mean_D)
-print('Variance:', variance_D)
+# Feature Engineering
+purchase_data['Category'] = np.where(purchase_data['Payment (Rs)'] > 200, 'RICH', 'POOR')
+features = purchase_data[['Candies (#)', 'Mangoes (Kg)', 'Milk Packets (#)']]
+target = purchase_data['Category']
 
-# Select the rows where the day of the week is Wednesday
-wednesday_df = df1[df1['Day'] == 'Wed']
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
 
-# Calculate the mean of the 'Price' column for these rows
-wednesday_mean = wednesday_df['Price'].mean()
+# Choose a classifier (Random Forest as an example)
+classifier = RandomForestClassifier()
 
-# Calculate the mean of the 'Price' column for all rows (population mean)
-population_mean = df1['Price'].mean()
+# Train the model
+classifier.fit(X_train, y_train)
 
-print('Wednesday Mean:', wednesday_mean)
-print('Population Mean:', population_mean)
+# Make predictions
+y_pred = classifier.predict(X_test)
 
-April_df = df1[df1['Month'] == 'Apr']
-
-April_mean = April_df['Price'].mean()
-
-population_mean = df1['Price'].mean()
-
-print('April Mean:', April_mean)
-print('Population Mean:', population_mean)
-
-l2 = list(map(lambda v: v < 0, df1['Chg%']))
-
-# Store only the False values
-l2_false = [value for value in l2 if value is False]
-
-probability = (len(l2_false) / len(l2))*100
-
-print(f'Probability: {probability}%')
-
-l3 = list(map(lambda v: v > 0, wednesday_df['Chg%']))
-
-l3_True = [value for value in l3 if value is True]
-
-probability_wed = (len(l3_True) / len(l3))*100
-
-conditional_prob = probability_wed / wednesday_df.shape[0]
-
-print(f'profits on wednesday: {probability_wed}%')
-
-print(f'conditional probability: {conditional_prob}%')
-
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-# Create a scatter plot of 'Chg%' data against the day of the week
-sns.scatterplot(x='Day', y='Chg%', data=df1)
-
-# Display the plot
-plt.show()
+# Evaluate the model
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
+print("Accuracy:", accuracy_score(y_test, y_pred))
